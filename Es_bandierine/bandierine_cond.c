@@ -18,7 +18,7 @@ struct bandierine_t
 {
     pthread_mutex_t mutex;
     pthread_cond_t partenza, giudice, fine;
-    int vincitore, giocatori_arrivati, salvo;
+    int vincitore, giocatori_arrivati, salvo, via;
 } bandierine;
 
 void init_bandierine(struct bandierine_t *b)
@@ -35,6 +35,7 @@ void init_bandierine(struct bandierine_t *b)
     b->vincitore = -1;
     b->giocatori_arrivati = 0;
     b->salvo = 0;
+    b->via = 0;
 }
 
 void attendi_il_via(struct bandierine_t *b)
@@ -46,7 +47,11 @@ void attendi_il_via(struct bandierine_t *b)
         pthread_cond_signal(&b->giudice);
     }
 
-    pthread_cond_wait(&b->partenza, &b->mutex);
+    while (!b->via)
+    {
+        pthread_cond_wait(&b->partenza, &b->mutex);
+    }
+    
     pthread_mutex_unlock(&b->mutex);
 }
 
@@ -103,7 +108,7 @@ void attendi_giocatori(struct bandierine_t *b)
 {
     pthread_mutex_lock(&b->mutex);
 
-    if (b->giocatori_arrivati != 2)
+    while(b->giocatori_arrivati != 2)
     {
         pthread_cond_wait(&b->giudice, &b->mutex);
     }
@@ -114,14 +119,19 @@ void attendi_giocatori(struct bandierine_t *b)
 
 void via(struct bandierine_t *b)
 {
+    pthread_mutex_lock(&b->mutex);
+
+    b->via = 1;
     pthread_cond_broadcast(&b->partenza);
+
+    pthread_mutex_unlock(&b->mutex);
 }
 
 int risultato_gioco(struct bandierine_t *b)
 {
     pthread_mutex_lock(&b->mutex);
 
-    if (b->giocatori_arrivati == 0)
+    while(b->giocatori_arrivati == 0)
     {
         pthread_cond_wait(&b->fine, &b->mutex);
     }

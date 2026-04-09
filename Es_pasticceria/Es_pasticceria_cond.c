@@ -10,7 +10,7 @@ struct pasticceria_t
 {
     pthread_mutex_t mutex;
     pthread_cond_t cliente, commesso, full, empty;
-    int torte, clienti;
+    int torte, clienti, commesso_pronto;
 
 } pasticceria;
 
@@ -51,6 +51,7 @@ void commesso_prende_torta(struct pasticceria_t *p)
     pthread_mutex_lock(&p->mutex);
     while (p->torte == 0)
     {
+        printf("COMMESSO: TORTE FINITE\n");
         pthread_cond_wait(&p->full, &p->mutex);
     }
     p->torte--;
@@ -62,6 +63,7 @@ void commesso_vendo_torta(struct pasticceria_t *p)
 {
     pthread_mutex_lock(&p->mutex);
     
+    p->commesso_pronto = 1;
     while (!p->clienti)
     {
         pthread_cond_wait(&p->cliente, &p->mutex);
@@ -78,8 +80,12 @@ void cliente_acquisto(struct pasticceria_t *p)
     
     p->clienti++;
     pthread_cond_signal(&p->cliente);
-    pthread_cond_wait(&p->commesso, &p->mutex);
-
+    while (!p->commesso_pronto)
+    {
+        pthread_cond_wait(&p->commesso, &p->mutex);        
+    }
+    
+    p->commesso_pronto = 0;
     p->clienti--;
     pthread_mutex_unlock(&p->mutex);
 }
@@ -96,6 +102,7 @@ void *cuoco(void *args)
 {
     while (1)
     {
+        pausetta();
         cuoco_inizio_torta(&pasticceria);
         cuoco_fine_torta(&pasticceria);
         printf("cuoco ha preparato una torta\n");
@@ -119,7 +126,7 @@ void *cliente(void *args)
     {
         cliente_acquisto(&pasticceria);
         printf("CLIENTE ACQUISTATO TORTA\n");
-
+        pausetta();
     }
 }
 
@@ -147,7 +154,7 @@ int main()
     pthread_create(&Tcliente3, &attr, cliente, NULL);
     pthread_attr_destroy(&attr);
 
-    sleep(5);
+    sleep(2);
 
     printf("Fine Main\n");
     return 0;
