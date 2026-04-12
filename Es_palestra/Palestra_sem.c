@@ -44,7 +44,7 @@ void prenota(struct Palestra *p, int persona, int m)
 {
     sem_wait(&p->mutex);
 
-    if (&p->attrezzi[m] > 0)
+    if (p->attrezzi[m] > 0)
     {
         p->prenotazioni[persona] = m;
         p->attrezzi[m]--;
@@ -55,7 +55,7 @@ void prenota(struct Palestra *p, int persona, int m)
 void usaatrezzo(struct Palestra *p, int persona, int m)
 {
     sem_wait(&p->mutex);
-    if (&p->prenotazioni[persona] == m || &p->attrezzi[m] > 0)
+    if (&p->prenotazioni[persona] == m || p->attrezzi[m] > 0)
     {
         if (&p->prenotazioni[persona] != m) p->attrezzi[m]--;
 
