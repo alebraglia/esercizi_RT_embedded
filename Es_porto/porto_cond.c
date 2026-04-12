@@ -51,13 +51,14 @@ void entrata_richiesta(struct porto_t *p)
     }
     p->posti--;
 
+    p->b_entrata++;
     while (p->transito >= 2)
     {
-        p->b_entrata++;
         pthread_cond_wait(&p->entrata, &p->mutex);
-        p->b_entrata--;
     }
+    p->b_entrata--;
     p->transito++;
+    
     pthread_mutex_unlock(&p->mutex);
 }
 
@@ -81,22 +82,35 @@ void uscita_richiesta(struct porto_t *p)
 {
     pthread_mutex_lock(&p->mutex);
 
+    p->b_uscita++;
     while (p->transito >= 2)
     {
-        p->b_uscita++;
         pthread_cond_wait(&p->uscita, &p->mutex);
-        p->b_uscita--;
     }
-
+    p->b_uscita--;
     p->transito++;
-    p->posti++;
-    pthread_cond_signal(&p->cond_posti);
+    
     pthread_mutex_unlock(&p->mutex);
 }
 
 void uscita_ok(struct porto_t *p)
 {
-    entrata_ok(p);
+    pthread_mutex_lock(&p->mutex);
+    
+    p->posti++;
+    pthread_cond_signal(&p->cond_posti);
+    
+    p->transito--;
+    if (p->b_uscita)
+    {
+        pthread_cond_signal(&p->uscita);
+    } 
+    else if (p->b_entrata)
+    {
+        pthread_cond_signal(&p->entrata);
+    }
+
+    pthread_mutex_unlock(&p->mutex);
 }
 
 void *barca(void *arg)
