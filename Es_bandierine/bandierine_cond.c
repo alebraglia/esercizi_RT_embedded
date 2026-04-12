@@ -17,7 +17,7 @@ void pausetta(void)
 struct bandierine_t
 {
     pthread_mutex_t mutex;
-    pthread_cond_t partenza, giudice, fine;
+    pthread_cond_t partenza, fine;
     int vincitore, giocatori_arrivati, salvo, via;
 } bandierine;
 
@@ -27,7 +27,6 @@ void init_bandierine(struct bandierine_t *b)
     pthread_condattr_t c_attr;
     pthread_mutex_init(&b->mutex, &m_attr);
     pthread_cond_init(&b->partenza, &c_attr);
-    pthread_cond_init(&b->giudice, &c_attr);
     pthread_cond_init(&b->fine, &c_attr);
 
     pthread_mutexattr_destroy(&m_attr);
@@ -42,10 +41,8 @@ void attendi_il_via(struct bandierine_t *b)
 {
     pthread_mutex_lock(&b->mutex);
     b->giocatori_arrivati++;
-    if (b->giocatori_arrivati == 2)
-    {
-        pthread_cond_signal(&b->giudice);
-    }
+    
+    pthread_cond_signal(&b->partenza);
 
     while (!b->via)
     {
@@ -110,7 +107,7 @@ void attendi_giocatori(struct bandierine_t *b)
 
     while(b->giocatori_arrivati != 2)
     {
-        pthread_cond_wait(&b->giudice, &b->mutex);
+        pthread_cond_wait(&b->partenza, &b->mutex);
     }
     b->giocatori_arrivati = 0;
 
