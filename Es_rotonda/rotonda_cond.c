@@ -21,24 +21,26 @@ struct rotonda_t
     pthread_mutex_t mutex;
     pthread_cond_t sezioni[S];
     int libera[S];
-    int macchine[N];
+    int macchine[N], num_macchine;
 } rotonda;
 
 void init_rotonda(struct rotonda_t *r)
 {
     pthread_condattr_t c_attr;
     pthread_mutexattr_t m_attr;
+    pthread_mutex_init(&r->mutex, &m_attr);
     for (size_t i = 0; i < S; i++)
     {
         pthread_cond_init(&r->sezioni[i], &c_attr);
-        pthread_mutex_init(&r->mutex, &m_attr);
+        r->libera[i] = 1;
     }
+    
     for (size_t i = 0; i < N; i++)
     {
-        r->libera[i] = 1;
         r->macchine[i] = FUORI;
     }
-
+    r->num_macchine = 0;
+    
     pthread_mutexattr_destroy(&m_attr);
     pthread_condattr_destroy(&c_attr);
 }
@@ -46,10 +48,11 @@ void init_rotonda(struct rotonda_t *r)
 void entra(struct rotonda_t *r, int num_auto, int sezione)
 {
     pthread_mutex_lock(&r->mutex);
-    while (!r->libera[sezione])
+    while (!r->libera[sezione] || r->num_macchine <= S-1)
     {
         pthread_cond_wait(&r->sezioni[sezione], &r->mutex);
     }
+    r->num_macchine++;
     r->libera[sezione] = 0;
     r->macchine[num_auto] = sezione;
 
@@ -60,11 +63,13 @@ void esci(struct rotonda_t *r, int num_auto)
 {
     pthread_mutex_lock(&r->mutex);
 
+    r->num_macchine--;
     int sezione_attuale = r->macchine[num_auto];
     r->macchine[num_auto] = FUORI;
     printf("auto %d ESCE dalla rotonda\n", num_auto);
     r->libera[sezione_attuale] = 1;
-    pthread_cond_signal(&r->sezioni[sezione_attuale]);
+    pthread_cond_broadcast(&r->sezioni[sezione_attuale]);
+    
     pthread_mutex_unlock(&r->mutex);
 }
 
