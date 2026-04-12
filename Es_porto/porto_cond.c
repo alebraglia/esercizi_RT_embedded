@@ -18,7 +18,7 @@ struct porto_t
 {
     pthread_mutex_t mutex;
     pthread_cond_t entrata, uscita, cond_posti;
-    int b_e, b_u, transito, posti;
+    int b_entrata, b_uscita, transito, posti;
 
 } porto;
 
@@ -37,7 +37,7 @@ void init_porto(struct porto_t *p)
 
     pthread_mutexattr_destroy(&m_attr);
     pthread_condattr_destroy(&c_attr);
-    p->b_e = p->b_u = p->transito = 0;
+    p->b_entrata = p->b_uscita = p->transito = 0;
     p->posti = 4;
 }
 
@@ -53,9 +53,9 @@ void entrata_richiesta(struct porto_t *p)
 
     while (p->transito >= 2)
     {
-        p->b_e++;
+        p->b_entrata++;
         pthread_cond_wait(&p->entrata, &p->mutex);
-        p->b_e--;
+        p->b_entrata--;
     }
     p->transito++;
     pthread_mutex_unlock(&p->mutex);
@@ -67,10 +67,10 @@ void entrata_ok(struct porto_t *p)
 
     p->transito--;
 
-    if (p->b_u)
+    if (p->b_uscita)
     {
         pthread_cond_signal(&p->uscita);
-    } else if (p->b_e)
+    } else if (p->b_entrata)
     {
         pthread_cond_signal(&p->entrata);
     }
@@ -83,9 +83,9 @@ void uscita_richiesta(struct porto_t *p)
 
     while (p->transito >= 2)
     {
-        p->b_u++;
+        p->b_uscita++;
         pthread_cond_wait(&p->uscita, &p->mutex);
-        p->b_u--;
+        p->b_uscita--;
     }
 
     p->transito++;
