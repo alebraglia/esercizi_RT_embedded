@@ -22,7 +22,7 @@ void pausetta(void)
 struct morra_cinese_t
 {
     pthread_mutex_t mutex;
-    pthread_cond_t giocatori, arbitro, arbitro_via, fine;
+    pthread_cond_t partenza, arbitro, fine;
     int giocatori_in_attesa, via, arbitro_fine;
     int mossa[2];
 } Morra_cinese;
@@ -32,9 +32,8 @@ void init_morra_cinese(struct morra_cinese_t *m)
     pthread_mutexattr_t m_attr;
     pthread_condattr_t c_attr;
 
-    pthread_cond_init(&m->giocatori, &c_attr);
+    pthread_cond_init(&m->partenza, &c_attr);
     pthread_cond_init(&m->arbitro, &c_attr);
-    pthread_cond_init(&m->arbitro_via, &c_attr);
     pthread_cond_init(&m->fine, &c_attr);
     pthread_mutex_init(&m->mutex, &m_attr);
     m->giocatori_in_attesa = 0;
@@ -48,7 +47,7 @@ void arbitro_aspetta_giocatori(struct morra_cinese_t *m)
 
     while (m->giocatori_in_attesa != 2)
     {
-        pthread_cond_wait(&m->giocatori, &m->mutex);
+        pthread_cond_wait(&m->partenza, &m->mutex);
     }
     m->arbitro_fine = 0;
 
@@ -61,7 +60,7 @@ void via(struct morra_cinese_t *m)
 
     m->via = 1;
     m->giocatori_in_attesa = 0;
-    pthread_cond_broadcast(&m->arbitro_via);
+    pthread_cond_broadcast(&m->partenza);
 
     pthread_mutex_unlock(&m->mutex);
 }
@@ -113,11 +112,11 @@ void giocatore_aspetta_via(struct morra_cinese_t *m)
     pthread_mutex_lock(&m->mutex);
 
     m->giocatori_in_attesa++;
-    pthread_cond_signal(&m->giocatori);
+    pthread_cond_signal(&m->partenza);
 
     while (!m->via)
     {
-        pthread_cond_wait(&m->arbitro_via, &m->mutex);
+        pthread_cond_wait(&m->partenza, &m->mutex);
     }
 
     pthread_mutex_unlock(&m->mutex);
