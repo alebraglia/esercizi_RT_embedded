@@ -61,11 +61,9 @@ void cliente_pagamento(struct supermercato_t *s, int cliente, int num_oggetti)
 
     sem_post(&s->mutex);
     sem_wait(&s->cassa[cassa]);
-    sem_wait(&s->mutex);
 
     printf("CLIENTE %d SERVITO IN CASSA %d con %d items\n", cliente, cassa, num_oggetti);
 
-    sem_post(&s->mutex);
     sem_wait(&s->finito[cassa]);
     sem_wait(&s->mutex);
 
